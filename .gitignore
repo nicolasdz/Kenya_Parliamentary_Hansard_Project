@@ -16,3 +16,6 @@ _site/
 # counterproductive to check this file into the repository.
 # Details at https://github.com/github/pages-gem/issues/768
 Gemfile.lock
+documentation/Kenyan EAC Tracking Project.pdf
+outputs/national_assembly_parser_outputs.csv
+outputs/senate_parser_outputs.csv
