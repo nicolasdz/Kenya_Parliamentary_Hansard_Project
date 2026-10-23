@@ -68,3 +68,9 @@ def analyze_language_distribution(speech_content):
         if percentage > 0.0:
             language_percentage[lang] = percentage
     return json.dumps(language_percentage)
+
+
+def primary_language(distribution_json):
+    """Return the language with the largest share in a distribution, or None if it is empty."""
+    distribution = json.loads(distribution_json)
+    return max(distribution, key=distribution.get) if distribution else None

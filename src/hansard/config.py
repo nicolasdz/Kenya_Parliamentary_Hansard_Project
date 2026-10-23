@@ -10,6 +10,8 @@ PROJECT_ROOT = Path(os.environ.get("HANSARD_ROOT", Path(__file__).resolve().pare
 INPUTS_DIR = PROJECT_ROOT / "inputs"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 MEMBERS_FILE = INPUTS_DIR / "parliamentarians" / "googlesheet.tsv"
+MANIFEST_FILE = INPUTS_DIR / "manifest.csv"
+DATABASE_FILE = OUTPUTS_DIR / "hansard.db"
 
 BASE_URL = "https://www.parliament.go.ke"
 

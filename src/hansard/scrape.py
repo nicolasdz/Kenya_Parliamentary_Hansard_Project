@@ -9,6 +9,7 @@ parliamentary sessions are picked up automatically.
 """
 
 import os
+import re
 import time
 from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
@@ -16,6 +17,11 @@ import requests
 from bs4 import BeautifulSoup
 
 from .config import BASE_URL
+from .manifest import load_manifest, save_manifest
+
+# The Hansard listings also contain order papers and similar documents; these
+# are recorded in the manifest but not downloaded.
+NON_HANSARD_FILENAME = re.compile(r'ORDER PAPER|ORDERS OF THE DAY|VOTES AND PROCEEDINGS', re.IGNORECASE)
 
 REQUEST_TIMEOUT = 60  # Seconds.
 POLITENESS_DELAY = 1  # Seconds to wait after each download.
@@ -83,7 +89,8 @@ def scrape_chamber(chamber, sessions=None, dry_run=False):
     """Download every Hansard PDF for a chamber that isn't already in its PDF folder.
 
     `sessions` limits scraping to specific session values; by default all are scraped.
-    With `dry_run`, files are listed but not downloaded. Returns the number of new files.
+    With `dry_run`, files are listed but not downloaded. Either way, every PDF link
+    found is recorded in the manifest. Returns the number of new files.
     """
     os.makedirs(chamber.pdf_dir, exist_ok=True)
     http = requests.Session()
@@ -99,10 +106,14 @@ def scrape_chamber(chamber, sessions=None, dry_run=False):
     if sessions:
         session_values = [s for s in session_values if s in sessions]
 
+    manifest = load_manifest()
     new_files = 0
     seen = set()  # The site lists some files more than once.
     for session_value in session_values:
         print(f"\n--- Starting session: {session_value} ---")
+        # Saved after each session so an interrupted run keeps what it found.
+        if seen:
+            save_manifest(manifest)
         page_url = f"{chamber.hansard_url}?title=%20&field_parliament_value={session_value}&page={{}}"
 
         try:
@@ -119,11 +130,19 @@ def scrape_chamber(chamber, sessions=None, dry_run=False):
                 for pdf_url in find_pdf_links(_get_soup(http, url)):
                     filename = os.path.basename(unquote(pdf_url))
                     filepath = chamber.pdf_dir / filename
+                    # Keep the first URL seen for a filename (listings run newest first).
+                    manifest.setdefault((chamber.key, filename), {
+                        "chamber": chamber.key, "filename": filename,
+                        "source_url": pdf_url, "session": session_value,
+                    })
                     if filepath.exists() or filename in seen:
                         print(f"  Skipping (already exists): {filename}")
                         continue
-
                     seen.add(filename)
+                    if NON_HANSARD_FILENAME.search(filename):
+                        print(f"  Skipping (not a Hansard): {filename}")
+                        continue
+
                     new_files += 1
                     if dry_run:
                         print(f"  Would download: {filename}")
@@ -137,6 +156,7 @@ def scrape_chamber(chamber, sessions=None, dry_run=False):
                 # Log errors for individual pages but carry on with the rest.
                 print(f"An error occurred while scraping page {page_num}: {e}")
 
+    save_manifest(manifest)
     verb = "would be downloaded" if dry_run else "downloaded"
     print(f"\nScraping completed: {new_files} new file(s) {verb}.")
     return new_files
