@@ -1,21 +1,35 @@
-# This .gitignore is appropriate for repositories deployed to GitHub Pages and using
-# a Gemfile as specified at https://github.com/github/pages-gem#conventional
+# --- Secrets ---
+# Credentials live in a local .env file (see .env.example), never in git.
+.env
+.env.*
+!.env.example
 
-# Basic Jekyll gitignores (synchronize to Jekyll.gitignore)
-_site/
-.sass-cache/
-.jekyll-cache/
-.jekyll-metadata
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Additional Ruby/bundler ignore for when you run: bundle install
-/vendor
+# --- Jupyter ---
+.ipynb_checkpoints/
 
-# Specific ignore for GitHub Pages
-# GitHub Pages will always use its own deployed version of pages-gem
-# This means GitHub Pages will NOT use your Gemfile.lock and therefore it is
-# counterproductive to check this file into the repository.
-# Details at https://github.com/github/pages-gem/issues/768
-Gemfile.lock
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Project data ---
+# Hansard PDFs are kept locally only; the scrapers re-download them.
+*.pdf
+# Parser outputs are large and fully reproducible from the inputs.
+outputs/
 documentation/Kenyan EAC Tracking Project.pdf
-outputs/national_assembly_parser_outputs.csv
-outputs/senate_parser_outputs.csv
