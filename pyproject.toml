@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hansard"
+version = "0.1.0"
+description = "Collect, clean, and publish Kenyan parliamentary Hansard records."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "langdetect>=1.0.9",
+    # 2.x pulls in onnxruntime for layout analysis, which crashes on import on Windows,
+    # and may change text extraction; stay on the 1.26 line that produced existing outputs.
+    "PyMuPDF>=1.26,<2",
+    "requests>=2.31",
+    "thefuzz>=0.22",
+    "tqdm>=4.65",
+    "Unidecode>=1.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+# Extra libraries used only by the research notebooks in notebooks/.
+notebooks = [
+    "geopandas",
+    "jupyter",
+    "matplotlib",
+    "pandas",
+    "plotly",
+    "python-dotenv",
+    "seaborn",
+    "transformers",
+]
+
+[project.scripts]
+hansard = "hansard.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
