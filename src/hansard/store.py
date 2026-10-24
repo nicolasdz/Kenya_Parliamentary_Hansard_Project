@@ -77,13 +77,56 @@ _SPEECH_COLUMNS = [
 ]
 
 
+# Full-text index over speech text and speaker lines. It is an "external content"
+# table: it stores only the index and reads text from `speeches`, and the triggers
+# keep it in sync. (The `speeches_fts` name also lets Datasette find it.) The
+# unicode61 tokenizer has no stemming, so English and Kiswahili are treated alike.
+FTS_SCHEMA = """
+CREATE VIRTUAL TABLE speeches_fts USING fts5(
+    text, speaker_raw,
+    content='speeches', content_rowid='id',
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER speeches_fts_insert AFTER INSERT ON speeches BEGIN
+    INSERT INTO speeches_fts(rowid, text, speaker_raw) VALUES (new.id, new.text, new.speaker_raw);
+END;
+
+CREATE TRIGGER speeches_fts_delete AFTER DELETE ON speeches BEGIN
+    INSERT INTO speeches_fts(speeches_fts, rowid, text, speaker_raw)
+    VALUES ('delete', old.id, old.text, old.speaker_raw);
+END;
+
+CREATE TRIGGER speeches_fts_update AFTER UPDATE OF text, speaker_raw ON speeches BEGIN
+    INSERT INTO speeches_fts(speeches_fts, rowid, text, speaker_raw)
+    VALUES ('delete', old.id, old.text, old.speaker_raw);
+    INSERT INTO speeches_fts(rowid, text, speaker_raw) VALUES (new.id, new.text, new.speaker_raw);
+END;
+"""
+
+# Changes to an existing database, applied in order; PRAGMA user_version records
+# how many have been applied.
+MIGRATIONS = [
+    FTS_SCHEMA + "INSERT INTO speeches_fts(speeches_fts) VALUES ('rebuild');",
+]
+
+
 def connect(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn):
+    version, = conn.execute("PRAGMA user_version").fetchone()
+    for number, script in enumerate(MIGRATIONS[version:], start=version + 1):
+        if conn.execute("SELECT COUNT(*) FROM speeches").fetchone()[0]:
+            print(f"Updating the database (migration {number}; one-off, may take a few minutes)...")
+        conn.executescript(f"BEGIN; {script} PRAGMA user_version = {number}; COMMIT;")
 
 
 def parsed_versions(conn):

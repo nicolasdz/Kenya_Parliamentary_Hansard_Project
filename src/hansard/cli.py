@@ -1,11 +1,12 @@
-"""Command-line interface: `hansard scrape`, `parse`, `report`, and `export`."""
+"""Command-line interface: `hansard scrape`, `parse`, `report`, `search`, and `export`."""
 
 import argparse
+import sqlite3
 from pathlib import Path
 
 from tqdm import tqdm
 
-from . import report, store
+from . import report, search, store
 from .config import CHAMBERS, DATABASE_FILE, MEMBERS_FILE, OUTPUTS_DIR
 from .manifest import load_manifest
 from .members import SpeakerMatcher, load_members
@@ -91,6 +92,26 @@ def run_report(args):
     report.print_report(store.connect(args.database))
 
 
+def run_search(args):
+    conn = store.connect(args.database)
+    try:
+        total, rows = search.search(
+            conn, " ".join(args.query), chamber=args.chamber, date_from=args.date_from,
+            date_to=args.date_to, member=args.member, party=args.party, language=args.language,
+            sort=args.sort, limit=args.limit, offset=args.offset, raw=args.raw,
+        )
+    except (ValueError, sqlite3.OperationalError) as e:  # Empty query, or bad --raw syntax.
+        raise SystemExit(f"Search failed: {e}")
+
+    shown = f"{args.offset + 1}-{args.offset + len(rows)}" if rows else "none"
+    print(f"{total} matching speeches; showing {shown}, sorted by {args.sort}.\n")
+    for row in rows:
+        member = f"  [{row['member_name']}{', ' + row['party'] if row['party'] else ''}]" if row["member_name"] else ""
+        print(f"{row['date']}  {row['chamber']}  {row['sitting'] or ''}  {row['speaker_raw']}{member}")
+        print(f"    {row['snippet'].replace(chr(10), ' ')}")
+        print(f"    {row['pdf_link'] or row['filename'] + ', page ' + str(row['page'])}\n")
+
+
 def run_export(args):
     output = args.output or OUTPUTS_DIR / "speeches.csv"
     rows = report.export_speeches_csv(store.connect(args.database), output, chamber=args.chamber)
@@ -126,6 +147,23 @@ def build_parser():
     rep = sub.add_parser("report", help="Print a data-quality summary of the database.")
     rep.add_argument("--database", type=Path, default=DATABASE_FILE)
     rep.set_defaults(func=run_report)
+
+    find = sub.add_parser("search", help="Full-text search of speeches.",
+                          description='Words must all appear; use "quoted phrases", word* for prefixes, '
+                                      'and OR between alternatives.')
+    find.add_argument("query", nargs="+")
+    find.add_argument("--database", type=Path, default=DATABASE_FILE)
+    find.add_argument("--chamber", choices=[*CHAMBERS, "joint"])
+    find.add_argument("--from", dest="date_from", metavar="YYYY-MM-DD")
+    find.add_argument("--to", dest="date_to", metavar="YYYY-MM-DD")
+    find.add_argument("--member", help="Part of a member's name, e.g. Cheruiyot.")
+    find.add_argument("--party", help="Party abbreviation, e.g. ODM.")
+    find.add_argument("--language", choices=["en", "sw"], help="Primary language of the speech.")
+    find.add_argument("--sort", choices=["rank", "newest", "oldest"], default="rank")
+    find.add_argument("--limit", type=int, default=10)
+    find.add_argument("--offset", type=int, default=0)
+    find.add_argument("--raw", action="store_true", help="Pass the query to SQLite FTS5 unchanged.")
+    find.set_defaults(func=run_search)
 
     export = sub.add_parser("export", help="Export speeches, with document and member details, to CSV.")
     export.add_argument("--database", type=Path, default=DATABASE_FILE)

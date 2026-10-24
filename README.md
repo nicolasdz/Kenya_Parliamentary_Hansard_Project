@@ -4,8 +4,8 @@ A data pipeline that collects, cleans, makes searchable, and publishes the
 Hansard (official verbatim record) of Kenya's National Assembly and Senate, so
 that citizens can more easily access these public records.
 
-**Status:** collection and parsing work, into a SQLite database. Search and
-publishing are not built yet.
+**Status:** collection, parsing, and full-text search work, in a SQLite
+database. Publishing is not built yet.
 
 ## Setup
 
@@ -29,8 +29,26 @@ hansard scrape --chamber all          # Download new PDFs and update inputs/mani
 hansard scrape --chamber senate --session 2022 --dry-run   # List new files only
 hansard parse                         # Parse new PDFs into outputs/hansard.db
 hansard report                        # Data-quality summary
+hansard search housing levy --chamber senate --from 2023-01-01
 hansard export --chamber senate       # Speeches (with member details) -> outputs/speeches.csv
 ```
+
+### Searching
+
+`hansard search` finds speeches containing all the words given, best matches
+first, and prints each with a snippet and a link that opens the PDF at the
+right page.
+
+- `"finance bill"` matches an exact phrase; `impeach*` matches words starting
+  with "impeach"; `maji OR water` matches either word.
+- Filters: `--chamber`, `--from`/`--to` (dates), `--member` (part of the official
+  or printed name), `--party`, `--language en|sw`.
+- `--sort newest|oldest`, `--limit`, `--offset`; `--raw` passes the query to
+  [SQLite FTS5](https://sqlite.org/fts5.html#full_text_query_syntax) unchanged.
+
+There is no stemming (so it works the same for English and Kiswahili): `levy`
+does not match `levies`, so search `levy OR levies`. (A prefix like `lev*` would
+also match "level".)
 
 `hansard parse` only parses PDFs it hasn't stored yet (or that were stored by an
 older parser version), so it is quick to re-run after a scrape. Speakers are
@@ -52,6 +70,7 @@ src/hansard/
   members.py    Load the member list and fuzzy-match speaker names to it
   language.py   Estimate the English/Kiswahili mix of each speech
   store.py      The SQLite database
+  search.py     Full-text search with filters
   report.py     Data-quality report and CSV export
   cli.py        The `hansard` command
 tests/          Unit tests (`pytest`)
@@ -81,6 +100,10 @@ PDFs are not stored in git. Run `hansard scrape` to download them.
   the speaker as printed, the matched member (if any) and match score, the text
   (paragraphs separated by newlines), word count, and language mix.
 - **members**: one row per member per Parliament, from the members TSV.
+- **speeches_fts**: an FTS5 full-text index of speech text and speaker lines.
+  It reads text from `speeches` (nothing is stored twice) and is kept in sync by
+  triggers. Databases from before it existed are indexed automatically the next
+  time any `hansard` command opens them (about 20 seconds).
 
 Speakers are only matched against members of the same chamber and Parliament.
 The member list currently covers the 12th and 13th National Assembly and the
