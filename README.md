@@ -17,7 +17,8 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-For the research notebooks, also install `pip install -e ".[notebooks]"`.
+For the research notebooks, also install `pip install -e ".[notebooks]"`
+(see [Research notebooks](#research-notebooks)).
 
 Credentials (currently only ACLED, used by the Political Violence notebook) go
 in a `.env` file in the project root; copy `.env.example` to get started.
@@ -79,7 +80,7 @@ inputs/
   national_assembly_hansards/, senate_hansards/   PDFs (local only, gitignored)
   manifest.csv                                     Source URL of every PDF listed online
   parliamentarians/googlesheet.tsv                 Official member list
-  other_data/                                      ACLED data, Kenya shapefiles
+  other_data/                                      ACLED data, Kenya shapefiles (local only, gitignored)
 outputs/        hansard.db and CSV exports (gitignored, reproducible)
 ```
 
@@ -109,6 +110,42 @@ Speakers are only matched against members of the same chamber and Parliament.
 The member list currently covers the 12th and 13th National Assembly and the
 13th Senate, so speeches from other chambers or Parliaments are left unmatched.
 
+## Research notebooks
+
+The notebooks in `notebooks/` read `outputs/hansard.db`, so run `hansard parse`
+first. Open them with the project's virtual environment as the Jupyter kernel
+(`pip install -e ".[notebooks]"`, then `jupyter lab` from the activated venv).
+
+- **Hansard ML Notebook**: sentiment over time (tabularisai multilingual
+  sentiment model) and topic classification (zero-shot). Speeches are split
+  into 480-word chunks for the models.
+- **Hansard Political Violence Notebook**: maps ACLED political-violence events
+  in Kenya, for comparison with parliamentary speech.
+
+Each notebook's loading cell has settings: `CHAMBER`, and `SAMPLE_SIZE` to
+analyse a random sample of speeches. The models take many hours over every
+speech on a CPU; a sample of a few thousand runs in minutes. The multilingual
+zero-shot cell (over 24 hours on a CPU) only runs when
+`RUN_MULTILINGUAL_ZERO_SHOT = True`.
+
+On Windows with an Anaconda-based Python, the ML notebook loads Windows' own
+C++ runtime before PyTorch, because Anaconda's older copy makes PyTorch fail
+with "DLL initialization routine failed" for `c10.dll`.
+
+### Third-party data
+
+The Political Violence notebook needs two datasets that can't be redistributed,
+so they are gitignored and each user downloads their own copy into
+`inputs/other_data/`:
+
+- **ACLED events**: register at [acleddata.com](https://acleddata.com), then
+  either export Kenya events as `ACLED Kenya Data through <MM-DD-YYYY>.csv`, or
+  put your login in `.env` and set `USE_ACLED_API = True` in the notebook to
+  download them. The notebook uses the newest `ACLED Kenya*.csv` in the folder.
+- **Kenya boundaries**: GADM version 2.5 shapefiles for Kenya from
+  [gadm.org](https://gadm.org) (non-commercial use only), in
+  `inputs/other_data/kenya_adm1_shapefiles/` (the notebook reads `KEN_adm1.shp`).
+
 ## Later
 
 - **Member list gaps.** Matching depends on `googlesheet.tsv`, which has no
@@ -128,7 +165,15 @@ The member list currently covers the 12th and 13th National Assembly and the
 - **Parallel parsing.** Parsing runs one PDF at a time. Running it in worker
   processes on Windows caused random crashes (access violations inside
   langdetect after PyMuPDF had run in the same worker) whose cause wasn't found.
-  Not needed for now, since only new PDFs are parsed after the first build.
+  Not needed for now, since only new PDFs are parsed after the first build. A
+  lead to try: Anaconda's outdated C++ runtime (see
+  [Research notebooks](#research-notebooks)) also breaks PyTorch on this setup.
+
+## License
+
+The code is released under the [MIT License](LICENSE). This covers the code
+only: Hansard records belong to the Parliament of Kenya, and the third-party
+datasets above have their own terms.
 
 ## Credits
 

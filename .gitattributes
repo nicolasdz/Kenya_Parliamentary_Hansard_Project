@@ -1,0 +1,14 @@
+# Store text files with LF line endings and check them out with LF everywhere, so
+# Windows and macOS/Linux checkouts are identical (this overrides core.autocrlf).
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files: never convert line endings or show text diffs.
+*.pdf binary
+*.xlsx binary
+*.db binary
+*.png binary

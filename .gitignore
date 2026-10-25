@@ -30,6 +30,9 @@ desktop.ini
 # --- Project data ---
 # Hansard PDFs are kept locally only; the scrapers re-download them.
 *.pdf
+# Third-party data whose licences don't allow redistribution (ACLED events, GADM
+# boundaries). Each user downloads their own copy; see the README.
+inputs/other_data/
 # Parser outputs are large and fully reproducible from the inputs.
 outputs/
 documentation/Kenyan EAC Tracking Project.pdf
