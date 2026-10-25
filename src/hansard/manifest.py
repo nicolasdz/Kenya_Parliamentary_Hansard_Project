@@ -22,6 +22,7 @@ def load_manifest(path=MANIFEST_FILE):
 def save_manifest(manifest, path=MANIFEST_FILE):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDS)
+        # LF line endings, matching .gitattributes (csv defaults to CRLF).
+        writer = csv.DictWriter(f, fieldnames=FIELDS, lineterminator="\n")
         writer.writeheader()
         writer.writerows(manifest[key] for key in sorted(manifest))

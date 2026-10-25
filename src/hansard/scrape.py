@@ -108,6 +108,7 @@ def scrape_chamber(chamber, sessions=None, dry_run=False):
 
     manifest = load_manifest()
     new_files = 0
+    failed = []
     seen = set()  # The site lists some files more than once.
     for session_value in session_values:
         print(f"\n--- Starting session: {session_value} ---")
@@ -127,36 +128,50 @@ def scrape_chamber(chamber, sessions=None, dry_run=False):
             url = page_url.format(page_num)
             print(f"Scraping page: {url}")
             try:
-                for pdf_url in find_pdf_links(_get_soup(http, url)):
-                    filename = os.path.basename(unquote(pdf_url))
-                    filepath = chamber.pdf_dir / filename
-                    # Keep the first URL seen for a filename (listings run newest first).
-                    manifest.setdefault((chamber.key, filename), {
-                        "chamber": chamber.key, "filename": filename,
-                        "source_url": pdf_url, "session": session_value,
-                    })
-                    if filepath.exists() or filename in seen:
-                        print(f"  Skipping (already exists): {filename}")
-                        continue
-                    seen.add(filename)
-                    if NON_HANSARD_FILENAME.search(filename):
-                        print(f"  Skipping (not a Hansard): {filename}")
-                        continue
-
-                    new_files += 1
-                    if dry_run:
-                        print(f"  Would download: {filename}")
-                        continue
-                    print(f"  Downloading: {filename}")
-                    pdf_response = http.get(pdf_url, timeout=REQUEST_TIMEOUT)
-                    pdf_response.raise_for_status()
-                    filepath.write_bytes(pdf_response.content)
-                    time.sleep(POLITENESS_DELAY)
+                pdf_urls = find_pdf_links(_get_soup(http, url))
             except requests.exceptions.RequestException as e:
                 # Log errors for individual pages but carry on with the rest.
                 print(f"An error occurred while scraping page {page_num}: {e}")
+                continue
+
+            for pdf_url in pdf_urls:
+                filename = os.path.basename(unquote(pdf_url))
+                filepath = chamber.pdf_dir / filename
+                # Keep the first URL seen for a filename (listings run newest first).
+                manifest.setdefault((chamber.key, filename), {
+                    "chamber": chamber.key, "filename": filename,
+                    "source_url": pdf_url, "session": session_value,
+                })
+                if filepath.exists() or filename in seen:
+                    print(f"  Skipping (already exists): {filename}")
+                    continue
+                seen.add(filename)
+                if NON_HANSARD_FILENAME.search(filename):
+                    print(f"  Skipping (not a Hansard): {filename}")
+                    continue
+
+                if dry_run:
+                    print(f"  Would download: {filename}")
+                    new_files += 1
+                    continue
+                print(f"  Downloading: {filename}")
+                try:
+                    pdf_response = http.get(pdf_url, timeout=REQUEST_TIMEOUT)
+                    pdf_response.raise_for_status()
+                except requests.exceptions.RequestException as e:
+                    # A broken link (the site has some 404s) shouldn't stop the rest of the page.
+                    print(f"  Could not download {filename}: {e}")
+                    failed.append(pdf_url)
+                    continue
+                filepath.write_bytes(pdf_response.content)
+                new_files += 1
+                time.sleep(POLITENESS_DELAY)
 
     save_manifest(manifest)
     verb = "would be downloaded" if dry_run else "downloaded"
     print(f"\nScraping completed: {new_files} new file(s) {verb}.")
+    if failed:
+        print(f"{len(failed)} file(s) could not be downloaded:")
+        for pdf_url in failed:
+            print(f"  {pdf_url}")
     return new_files
