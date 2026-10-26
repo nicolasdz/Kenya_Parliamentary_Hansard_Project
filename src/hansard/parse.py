@@ -1,6 +1,6 @@
 """Extract individual speeches from Hansard PDFs.
 
-Based on the "Hansard Parser" notebook by Joshua Been (August 2025).
+Based on the "Hansard Parser" notebook by Josh Been (August 2025).
 """
 
 import hashlib

@@ -1,6 +1,6 @@
 """Download Hansard PDFs from the Parliament of Kenya website.
 
-Originally written by Joshua Been as separate National Assembly and Senate
+Originally written by Josh Been as separate National Assembly and Senate
 notebooks (August 2025). The two were identical apart from the listing URL,
 so both chambers now share this module.
 

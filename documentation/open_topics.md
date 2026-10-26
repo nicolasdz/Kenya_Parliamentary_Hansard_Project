@@ -74,19 +74,18 @@ members Google Sheet was built from; `googlesheet.tsv` is the exported copy the
 pipeline uses. **To decide:** which file is the source of truth, and whether the
 raw workbook stays in the repository.
 
-### Licensed data in git history
-
-**Status:** only matters if the repository is made public.
-
-The ACLED events CSV and GADM boundary shapefiles are no longer tracked, but
-they remain in past commits. Neither licence allows redistribution, so they
-would have to be purged from history (as was done for the PDFs) before the
-repository could be made public. **To decide:** whether and when the
-repository becomes public.
-
 ---
 
 ## Planned work
+
+### Delete the archived repository
+
+Before the repository was prepared for publication (2026-10-25), its history
+was rewritten to remove the ACLED and GADM data (whose licences don't allow
+redistribution) and personal details, and pushed to a new repository. The
+original, renamed `Kenya_Parliamentary_Hansard_Project_archive`, is private
+and still contains the old history, including the licensed data. Keep it
+private, and delete it once it's no longer needed as a fallback.
 
 ### Scheduled updates
 
