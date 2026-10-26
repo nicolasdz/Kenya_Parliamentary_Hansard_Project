@@ -57,6 +57,8 @@ only: Hansard records belong to the Parliament of Kenya, and third-party
 datasets used by the research notebooks have their own terms (see the
 [user guide](documentation/user_guide.md#third-party-data)).
 
-## Credits
+## Acknowledgements
 
-The original scraper and parser were written by Joshua Been (2025).
+I am grateful to all the staff at the Kenyan Parliament for their work in transcribing floor speeches, collecting them into Hansards, and publishing them online.  This project is intended to make their excellent work even more accessible to ordinary Kenyans. 
+
+This project was originally begun as a Data Research Fellowship supported by the Baylor University Libraries' Data & Digital Scholarship initiative.  I am exceedingly grateful to Sinai Wood and Josh Been for their support and assistance. In particular, Josh coded the original versions of the scraper and parser used in this project.
